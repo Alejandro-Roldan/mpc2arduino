@@ -7,6 +7,7 @@ import threading
 import time as t
 from mpd import MPDClient
 import traceback
+import mpd
 
 #Global Variables
 ser = None
@@ -53,8 +54,10 @@ def updateLCD():
 				sendSerial("playlistlength", "")
 				print("Player inactive!")
 				stopSongTracker = True
-				time.sleep(0.5);
-				continue
+				time.sleep(0.5)
+				while(not client1.currentsong()):
+					time.sleep(1)
+					continue
 				#~ raise Exception
 				
 			if(state!=client1.status()["state"]):
@@ -227,17 +230,21 @@ def sendSerial(key, message):
 	if key!=None and key!="":
 		tries = 0
 		while( not transfersuccess ):
+			if key!="playtimeremaining":
+				print("Sending key: %s | %s" % (key, message[:128]))
 			ser.write("%s|%s\n" % (key, message[:128]))
 			time.sleep(0.05)
 			result = ser.readline()
 			response = result.rstrip('\r\n').lower()
 			if response=="ok":
 				transfersuccess = True
+				if key!="playtimeremaining":
+					print("Response OK")
 				break
 			else:
 				transfersuccess = False
 				tries = tries + 1
-				if tries>5:
+				if tries>30:
 					break
 	return transfersuccess
 
@@ -397,13 +404,13 @@ if ser!=None:
 	try:
 		client.close()
 		client.disconnect()
-	except ConnectionError:
+	except mpd.ConnectionError:
 		pass
 
 	try:
 		client1.close()
 		client1.disconnect()
-	except ConnectionError:
+	except mpd.ConnectionError:
 		pass
 		
 	ser.close()
